@@ -3,8 +3,8 @@ SQLVisualizer is a powerful and intuitive tool that transforms complex SQL queri
 
 If You are using it for the first time, then make sure the following Libraries are installed in your system.
 1. Flask
-   Command: - pip install Flask
+Command: - pip install Flask
 2. Graphviz
-   Command: - pip install graphviz
+Command: - pip install graphviz
 3. Pillow
-   Command: - pip install Pillow
+Command: - pip install Pillow
