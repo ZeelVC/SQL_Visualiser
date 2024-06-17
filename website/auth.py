@@ -1,8 +1,8 @@
 import os
 import base64
 from flask import Blueprint, render_template, request, session, flash
-from .logic1 import main1, check_syntax
-from .logic2 import main2
+from .structure_view import main1, check_syntax
+from .detail_view import main2
 from PIL import Image, ImageEnhance
 
 auth = Blueprint('auth', __name__)
@@ -58,10 +58,10 @@ def SQLViz():
     if request.method == 'POST':
         query1 = request.form.get('query', '')
         query2 = query1
-        if check_syntax(query1, 0):
-            print('error')
-            flash("SQL Syntax Error:", "error")
-            return render_template("SQLViz.html")
+        #if check_syntax(query1, 0):
+         #   print('error')
+         #   flash("SQL Syntax Error:", "error")
+         #   return render_template("SQLViz.html")
         if query1 and query2:
             # Generate the visualization
             image_path1 = main1(query1)

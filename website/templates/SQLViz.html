@@ -252,7 +252,7 @@ function formatSQLQueryWithClauses(query) {
     query = query.trim();
     
     // List of SQL clauses to be converted to uppercase and followed by a newline
-    const clauses = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'JOIN', 'ON', 'ORDER', 'GROUP', 'HAVING', 'LIMIT'];
+    const clauses = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'JOIN', 'ON', 'ORDER', 'GROUP', 'HAVING', 'LIMIT', 'UNION', 'WITH'];
 
     // Create a regex pattern to match these clauses
     const regexPattern = new RegExp(`\\b(${clauses.join('|')})\\b`, 'gi');

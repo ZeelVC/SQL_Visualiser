@@ -29,25 +29,37 @@ def aggregate(str):
         present = True
     elif str[0] == 'C' and str[1] == 'O' and str[2] == 'U' and str[3] == 'N' and str[4] == 'T' and str[5] == '(':
         present = True
-
     return present
- 
-def sql_to_graph(parsed, root, ind):
+
+
+def sql_to_graph(parsed, root, ind, list_of_cte):
  
     #maintaining current_node
     current_node = root
     parent_node = root
-    tableNode = Node('0')
+    tableNode = Node('Null')
     while ind < len(parsed):
         clause = parsed[ind]
         #close bracket code, indication there was a subquery
-        if clause == ')':
+        if clause == ')' or clause == ')WITHEND' or clause == '),WITHEND' or clause == 'UNION' or clause == 'WITHUNION':
             break
  
         #select condition
         elif clause.upper() == 'SELECT':
-            ind+=1
-            continue
+            tmp = Node('SELECT')
+            j = ind + 1
+            str = 'SELECT'
+            aggr = 'AGGREGATE'
+            isaggr = False
+            while parsed[j].upper() != 'FROM':
+                if aggregate(parsed[j].upper()):
+                    isaggr = True
+                    break
+                j+=1
+            #tmp.key_ele = str
+            #parent_node = tmp
+            #current_node = parent_node
+
  
         #From condition
         elif clause.upper() == 'FROM':
@@ -55,20 +67,56 @@ def sql_to_graph(parsed, root, ind):
                 ind+=1
                 continue
             else:
-                tableNode = Node(parsed[ind + 1])
+                '''tableNode = Node(parsed[ind + 1])
                 j = ind + 2
                 str = parsed[ind + 1]
-                while j < len(parsed) and parsed[j] != ')' and parsed[j].upper() != 'WHERE' and parsed[j].upper() != 'JOIN' and parsed[j].  upper() != 'GROUP' and parsed[j].upper() != 'ORDER' and parsed[j].upper() != 'LIMIT':
+                while j < len(parsed) and parsed[j] != ')' and parsed[j].upper() != 'WHERE' and parsed[j].upper() != 'JOIN' and parsed[j].  upper() != 'GROUP' and parsed[j].upper() != 'ORDER' and parsed[j].upper() != 'LIMIT' and parsed[j].upper() != 'UNION':
                     str+=' ' + parsed[j]
                     j+=1
                 tableNode.key_ele = str
+                '''
+                tableNode = Node(parsed[ind + 1])
+                j = ind + 1
+                str = '' 
+                cte_table_name = ''
+                while j < len(parsed) and parsed[j] != ')' and parsed[j].upper() != 'WHERE' and parsed[j].upper() != 'JOIN' and parsed[j].upper() != 'GROUP' and parsed[j].upper() != 'ORDER' and parsed[j].upper() != 'LIMIT' and parsed[j].upper() != 'UNION' and parsed[j].upper() != 'WITHUNION' and parsed[j] != ')WITHEND' and parsed[j] != '),WITHEND' and parsed[j].upper() != 'LEFT' and parsed[j].upper() != 'INNER':
+                    if parsed[j][len(parsed[j]) - 1] == ',':
+                        str += parsed[j]
+                        cte_table_name += parsed[j][0 : len(parsed[j]) - 1]
+                        tableNode.key_ele = 'SELF JOIN'
+                        table = Node(cte_table_name)
+                        tableNode.child.append(table)
+                        for table_name in list_of_cte:
+                            if cte_table_name == table_name.key_ele[6:]:
+                                table.child.append(table_name)
+                                break
+                        cte_table_name = ''
+                        str += '\n'
+                    else:
+                        cte_table_name+=parsed[j]
+                        str += ' ' + parsed[j]
+                    j+=1
+                if tableNode.key_ele == 'SELF JOIN':
+                    table = Node(cte_table_name)
+                    tableNode.child.append(table)
+                    for table_name in list_of_cte:
+                        if cte_table_name == table_name.key_ele[6:]:
+                            table.child.append(table_name)
+                            break
+                if tableNode.key_ele != 'SELF JOIN':        
+                    tableNode.key_ele = str
+                    for table_name in list_of_cte:
+                        if cte_table_name == table_name.key_ele[6:]:
+                            tableNode.child.append(table_name)
+                            break
+                
  
         #Where condition
         elif clause.upper() == 'WHERE':
             if parsed[ind + 1] == '(':
-                temp = Node('WHERE')
-                current_node.child.append(temp)
-                current_node = temp
+                #temp = Node('WHERE')
+                #current_node.child.append(temp)
+                #current_node = temp
                 ind+=1
                 continue
             else:
@@ -78,27 +126,70 @@ def sql_to_graph(parsed, root, ind):
                     str += ' ' + parsed[j]
                     j+=1
                 '''
-                temp = Node(str)
-                current_node.child.append(temp)
-                current_node = temp
+                #temp = Node(str)
+                #current_node.child.append(temp)
+                #current_node = temp
  
  
         #Join condition
         elif clause.upper() == 'JOIN':
-            str = 'JOIN'
+            str = ''
+            if parsed[ind-1].upper() == 'LEFT':
+                str += 'LEFT'
+            elif parsed[ind-1].upper() == 'RIGHT':
+                str += 'RIGHT'
+            elif parsed[ind-1].upper() == 'INNER':
+                str += 'INNER'
+            elif parsed[ind-1].upper() == 'FULL':
+                str += 'FULL'
+            elif parsed[ind-1].upper() == 'CROSS':
+                str += 'CROSS'
+            elif parsed[ind-1].upper() == 'SELF':
+                str += 'SELF'
+            elif parsed[ind-1].upper() == 'OUTER':
+                str += 'OUTER'
+            str += ' JOIN'
             j = ind + 1
+            second_table = ''
+            cte_table_name = ''
+            list_of_cte_table = []
+            while parsed[j].upper() != 'ON':
+                if parsed[j][len(parsed[j]) - 1] == ',':
+                    second_table += parsed[j]
+                    cte_table_name += parsed[j][0 : len(parsed) - 1]
+                    for table_name in list_of_cte:
+                        if table_name.key_ele[6:] == cte_table_name:
+                            list_of_cte_table.append(table_name)
+                            break
+                    cte_table_name = ''
+                else:
+                    second_table += ' ' + parsed[j]
+                    cte_table_name += parsed[j]
+                j+=1
+            for table_name in list_of_cte:
+                if table_name.key_ele[6:] == cte_table_name:
+                    list_of_cte_table.append(table_name)
+                    break
             '''while parsed[j] != 'ON':
                 j+=1
             while j < len(parsed) and parsed[j] != ')' and parsed[j].upper() != 'GROUP' and parsed[j].upper() != 'JOIN':
                 str += ' ' + parsed[j]
                 j+=1
             '''
-            temp = Node(str)
-            temp.child.append(parent_node)
-            parent_node = temp    
+            if parent_node.key_ele == 'Null':
+                temp = Node(str)
+                parent_node = temp
+                current_node = temp
+            else:
+                temp = Node(str)
+                temp.child.append(parent_node)
+                parent_node = temp    
+            
             if parsed[ind + 1] != '(':
-                temp = Node(parsed[ind + 1])
+                temp = Node(second_table)
                 parent_node.child.append(temp)
+                for table_name in list_of_cte_table:
+                    temp.child.append(table_name)
  
         #group by condition
         elif clause.upper() == 'GROUP':
@@ -108,9 +199,9 @@ def sql_to_graph(parsed, root, ind):
                 str+=' ' + parsed[j]
                 j+=1
             '''
-            temp = Node(str)
-            temp.child.append(parent_node)
-            parent_node = temp
+            #temp = Node(str)
+            #temp.child.append(parent_node)
+            #parent_node = temp
  
         #Having condition
         elif clause.upper() == 'HAVING':
@@ -120,9 +211,9 @@ def sql_to_graph(parsed, root, ind):
                 str+=' ' + parsed[j]
                 j+=1
             '''
-            temp = Node(str)
-            temp.child.append(parent_node)
-            parent_node = temp
+            #temp = Node(str)
+            #temp.child.append(parent_node)
+            #parent_node = temp
        
         #Order by condition
         elif clause.upper() == 'ORDER':
@@ -132,9 +223,9 @@ def sql_to_graph(parsed, root, ind):
                 str+=' ' + parsed[j]
                 j+=1
             '''
-            temp = Node(str)
-            temp.child.append(parent_node)
-            parent_node = temp
+            #temp = Node(str)
+            #temp.child.append(parent_node)
+            #parent_node = temp
  
         #LIMIT condition
         elif clause.upper() == 'LIMIT':
@@ -144,27 +235,34 @@ def sql_to_graph(parsed, root, ind):
                 str+=' ' + parsed[j]
                 j+=1
             '''
-            temp = Node(str)
-            temp.child.append(parent_node)
-            parent_node = temp
+            #temp = Node(str)
+            #temp.child.append(parent_node)
+            #parent_node = temp
  
         #subquery
             #in case join, we had to add the subquery to the parent node
             #while in rest cases to current node
         elif clause == '(' and parsed[ind + 1].upper() == 'SELECT':
-            root_subquery = Node('SubQuery')
+            root_subquery = Node('Null')
             '''j = ind + 2
             str = 'SELECT'
             while parsed[j].upper() != 'FROM':
                 str+=' ' + parsed[j]
                 j+=1
             root_subquery.key_ele = str
-            root_subquery = sql_to_graph(parsed, root_subquery, ind + 2)
             '''
-            if parsed[ind - 1].upper() == 'FROM':
-                tableNode = root_subquery
+            
+            root_subquery = sql_to_graph(parsed, root_subquery, ind + 1, list_of_cte)
+            
+            tmp = Node('Subquery')
+            if parsed[ind - 1].upper() == 'FROM' or parsed[ind - 1].upper() == 'WHERE' or parsed[ind - 1].upper() == 'AND' or parsed[ind - 1].upper() == 'OR' or parsed[ind - 1] == '=' or parsed[ind - 1] == '>' or parsed[ind - 1] == '<' or parsed[ind - 1] == 'IN' or parsed[ind - 1] == 'LIKE' or parsed[ind - 1] == 'AS' or parsed[ind - 1] == '!=':
+                tableNode.child.append(tmp)
+                tmp.child.append(root_subquery) 
+                if tableNode.key_ele == 'Null':
+                    tableNode = tableNode.child[0]
             elif parsed[ind - 1].upper() == 'JOIN':
-                parent_node.child.append(root_subquery)
+                parent_node.child.append(tmp)
+                tmp.child.append(root_subquery)
             else:
                 current_node.child.append(root_subquery)
             count = 1
@@ -178,7 +276,14 @@ def sql_to_graph(parsed, root, ind):
             ind-=1
         ind += 1
     #at last of each adding tableNode as per approach.
-    current_node.child.append(tableNode)
+    if current_node.key_ele == 'Null':
+        parent_node = tableNode
+    else:
+        current_node.child.append(tableNode)
+    #if isaggr:
+    #    temp = Node(aggr)
+    #    temp.child.append(parent_node)
+    #    parent_node = temp
     return parent_node
  
 # print the graph
@@ -333,9 +438,12 @@ def check_syntax(query, ind):
 
     return False
 
+
 # main function
 def main1(query):
-    
+    query = query.replace('\n', ' ')
+    query = query.replace(', ', ',')
+    query = query.replace(',', ', ')
     #if check_syntax(query, 0):
     #    print('error')
     #    flash("SQL Syntax Error:", "error")
@@ -349,28 +457,131 @@ def main1(query):
         #query = "SELECT * FROM department d WHERE salary > 30000"
         #query = "SELECT emp_name, emp_id FROM ( SELECT MAX(salary) FROM employee ) combination GROUP BY p1. p1"
         #query = "SELECT op1.OrderID, op1.ProductID as p1, op2.ProductID as p2 FROM ( SELECT DISTINCT OrderID, ProductID FROM OrderLines ) op1 JOIN ( SELECT DISTINCT OrderID, ProductID FROM OrderLines ) op2 ON op1.OrderID = op2.OrderID AND op1.ProductID > op2.ProductID )"
-        parsed = query.replace('\n', ' ').split()
-        #print(parsed)
-        root = Node('SELECT')
-        i = 1
-        str = 'SELECT'
-        aggr = 'AGGREGATE'
-        isaggr = False
-        while parsed[i].upper() != 'FROM':
-            if aggregate(parsed[i].upper()):
-                isaggr = True
-                break
+        parsed = query.split()
+        list_of_cte = []
+        i = 0
+        while i < len(parsed):
+            if parsed[i].upper() == 'WITH':
+                str = 'CTE -'
+                i+=1
+                while i < len(parsed) and parsed[i].upper() != 'AS':
+                    str += ' ' + parsed[i]
+                    i+=1
+                tmp = Node(str)
+                list_of_cte.append(tmp)
+                while i < len(parsed) and parsed[i] != ')' and parsed[i] != '),':
+                    if parsed[i].upper() == 'SELECT':
+                        parsed[i] = 'WITHSELECT'
+                    if parsed[i].upper() == 'UNION':
+                        parsed[i] = 'WITHUNION'
+                    i+=1
+                if parsed[i] == ')' or parsed[i] == '),':
+                    if parsed[i] == '),':
+                        parsed.insert(i + 1, 'WITH')
+                    parsed[i]+='WITHEND'
             i+=1
-        root.key_ele = str
-        root = sql_to_graph(parsed, root, 1)
-        if isaggr:
-            temp = Node(aggr)
-            temp.child.append(root)
-            root = temp
+        #print(parsed)
+        #root = Node('Null')
+        #i = 1
+        #str = 'SELECT'
+        #aggr = 'AGGREGATE'
+        #isaggr = False
+        #while parsed[i].upper() != 'FROM':
+        #    if aggregate(parsed[i].upper()):
+        #        isaggr = True
+        #        break
+        #    i+=1
+        #root.key_ele = str
+        #root = sql_to_graph(parsed, root, 1)
+        #if isaggr:
+        #    temp = Node(aggr)
+        #    temp.child.append(root)
+        #    root = temp
+        graph = Digraph()
+        list_of_main_root = []
+        root = Node('Null')
+        i = 0
+        ind_of_cte = 0
+        cteroot = Node('CTE')
+        is_main_root = False
+        is_create_node = False
+        is_cte_in_main = False
+        while i < len(parsed):
+            if parsed[i].upper() == 'CREATE':
+                is_create_node = True
+                CreateNode = Node(parsed[i].upper())
+                i+=1
+                while parsed[i].upper() != 'TABLE':
+                    CreateNode.key_ele+=' ' + parsed[i].upper()
+                    i+=1
+                CreateNode.key_ele+=' ' + parsed[i].upper() + '\n'
+                i+=1
+                while parsed[i].upper() != 'AS':
+                    if parsed[i][len(parsed[i]) - 1] == ',':
+                        CreateNode.key_ele += parsed[i] + '\n'
+                    else:
+                        CreateNode.key_ele += parsed[i] + ' '
+                    i+=1
+            if parsed[i].upper() == 'SELECT':
+                if i == 0 or (i != 0 and parsed[i - 1] != '('):
+                    root = Node('Null')
+                    root = sql_to_graph(parsed, root, i, list_of_cte)
+                    print_graph(root)
+                    is_main_root = True
+                    list_of_main_root.append(root)
+            elif parsed[i].upper() == 'UNION':
+                tmp = Node('UNION ALL')
+                if parsed[i + 1].upper() != 'ALL': 
+                    tmp.key_ele = 'UNION'
+                tmp.child.append(root)
+                root = tmp
+                root1 = Node('Null')
+                if parsed[i + 1].upper() != 'ALL':
+                    root1 = sql_to_graph(parsed, root1, i + 1, list_of_cte)
+                    i+=1
+                else:
+                    root1 = sql_to_graph(parsed, root1, i + 2, list_of_cte)
+                    i+=2
+                root.child.append(root1)
+            elif parsed[i] == 'WITHSELECT':
+                root = Node('Null')
+                parsed[i] = 'SELECT'
+                root = sql_to_graph(parsed, root, i, list_of_cte)
+            elif parsed[i] == 'WITHUNION':
+                parsed[i] = 'UNION'
+                tmp = Node('UNION ALL')
+                if parsed[i + 1].upper() != 'ALL': 
+                    tmp.key_ele = 'UNION'
+                tmp.child.append(root)
+                root = tmp
+                root1 = Node('Null')
+                if parsed[i + 1].upper() != 'ALL':
+                    parsed[i+1] = 'SELECT'
+                    root1 = sql_to_graph(parsed, root1, i + 1, list_of_cte)
+                    i+=1
+                else:
+                    parsed[i+2] = 'SELECT'
+                    root1 = sql_to_graph(parsed, root1, i + 2, list_of_cte)
+                    i+=2
+                root.child.append(root1)
+            elif parsed[i] == ')WITHEND' or parsed[i] == '),WITHEND':
+                list_of_cte[ind_of_cte].child.append(root)
+                root = list_of_cte[ind_of_cte]
+                cteroot.child.append(root)
+                ind_of_cte+=1
+                
+            i+=1
+        if is_main_root == False:
+            root = cteroot
+        if is_create_node == True:
+                CreateNode.child.append(root)
+                root = CreateNode    
+        #if is_cte_in_main == False:
+        #    cteroot.visualize(graph)
+
 
         print_graph(root)
     
-        graph = Digraph()
         root.visualize(graph)
         graph.render('node_structure1', format='png', cleanup=True)
         return f'{'node_structure1'}.png'
@@ -384,5 +595,6 @@ if __name__ == '__main__':
 
     #query = "SELECT country, product, year, month FROM `bigdata-user.avinash_t`.`BD240662_base` WHERE fold_count IS NOT NULL AND fold_count > 0 AND country IS NOT NULL GROUP BY 1,2,3,4 ORDER BY 1,2,3,4"
     #query = "SELECT country, product, year, month,SUM(fold_count) as fold_count, COUNT(un) as device_count FROM `bigdata-user.avinash_t`.`BD240662_base` WHERE fold_count IS NOT NULL AND fold_count > 0 AND country IS NOT NULL GROUP BY 1,2,3,4 ORDER BY 1,2,3,4"
-    query="SELECT  un FROM `bigdata-dqa-data.mobile_udc`.`to_udc_tsp` WHERE p_yymmddval >= '2021-08-01 AND  REGEXP_CONTAINS(un, '^[A-Za-z0-9]+$') AND mcc in ('410', '411', '412', '413', '414', '450') and feature = 'HKEY' and device_model like any ('%SM-F711%','%SM-F926%','%SM-F721%','%SM-F936%','%SM-F731%','%SM-F946%')"
+    #query="SELECT  un FROM `bigdata-dqa-data.mobile_udc`.`to_udc_tsp` WHERE p_yymmddval >= '2021-08-01 AND  REGEXP_CONTAINS(un, '^[A-Za-z0-9]+$') AND mcc in ('410', '411', '412', '413', '414', '450') and feature = 'HKEY' and device_model like any ('%SM-F711%','%SM-F926%','%SM-F721%','%SM-F936%','%SM-F731%','%SM-F946%')"
+    query = "Select job_id, salary from job group by 1, 2"
     main1(query)
