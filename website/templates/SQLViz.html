@@ -211,7 +211,7 @@
     <div class="sql-query-container" id="sqlQueryContainer">
         <h2>SQL Query Input</h2>
         <form class="form-container" action="{{ url_for('auth.SQLViz') }}" method="POST">
-            <textarea class="input-field" id="query" name="query" rows="20" placeholder="Enter your SQL query here...&#10;&#10;Enter subquery in following format:&#10;&#10;( SQL_SubQuery )&#10;&#10;And make sure columns are separated by ', '">{{ query | safe }}</textarea>
+            <textarea class="input-field" id="query" name="query" rows="20" placeholder="Enter your SQL query here...&#10;&#10;Enter subquery in following format:&#10;&#10;( SQL_SubQuery )">{{ query | safe }}</textarea>
             <button type="submit" class="visualize-button" onclick="return visualize()">Visualize</button>
         </form>
     </div>
@@ -220,8 +220,8 @@
         <h2>Visualization Results</h2>
         <div class="tab-container">
             <div class="tab-buttons">
-                <button class="tab-button" onclick="openTab(event, 'tab1')" id="defaultOpen">Structure View</button>
-                <button class="tab-button" onclick="openTab(event, 'tab2')">Detail View</button>
+                <button class="tab-button" onclick="openTab(event, 'tab1')" id="defaultOpen">Tables View</button>
+                <button class="tab-button" onclick="openTab(event, 'tab2')">Query View</button>
             </div>
             <button class="download-button" onclick="downloadCurrentImage()">Download Image</button>
         </div>
@@ -356,7 +356,7 @@ function downloadCurrentImage() {
     var img = container.querySelector('.visualization-image');
 
     if (img) {
-        var filename = containerId === 'tab1' ? 'structure_view.png' : 'detail_view.png';
+        var filename = containerId === 'tab1' ? 'Tables_view.png' : 'Query_view.png';
         var link = document.createElement('a');
         link.href = img.src;
         link.download = filename;
