@@ -218,157 +218,194 @@
     <div class="splitter" id="splitter"></div>
     <div class="output-container" id="outputContainer">
         <h2>Visualization Results</h2>
-        <div class="tab-container">
-            <div class="tab-buttons">
-                <button class="tab-button" onclick="openTab(event, 'tab1')" id="defaultOpen">Tables View</button>
-                <button class="tab-button" onclick="openTab(event, 'tab2')">Query View</button>
+        {% if dict_of_images %}
+            <div class="tab-container">
+                <div class="tab-buttons" id="queryTabs">
+                    {% for query_num in dict_of_images.keys() %}
+                        <button class="tab-button" onclick="openQueryTab(event, 'query{{ query_num }}')" {% if loop.first %}id="defaultOpen"{% endif %}>Query {{ query_num }}</button>
+                    {% endfor %}
+                </div>
             </div>
-            <button class="download-button" onclick="downloadCurrentImage()">Download Image</button>
-        </div>
-        <div id="tab1" class="tabcontent">
-            <div class="output-field" id="visualization1">
-                {% if encoded_image1 %}
-                <img class="visualization-image zoomable" src="data:image/png;base64,{{ encoded_image1 }}" alt="Visualization Image 1">
-                {% else %}
-                <p>Please enter a query and click 'Visualize'.</p>
-                {% endif %}
-            </div>
-        </div>
-        <div id="tab2" class="tabcontent">
-            <div class="output-field" id="visualization2">
-                {% if encoded_image2 %}
-                <img class="visualization-image zoomable" src="data:image/png;base64,{{ encoded_image2 }}" alt="Visualization Image 2">
-                {% else %}
-                <p>Please enter a query and click 'Visualize'.</p>
-                {% endif %}
-            </div>
-        </div>
+            {% for query_num, images in dict_of_images.items() %}
+                <div id="query{{ query_num }}" class="query-content">
+                    <div class="tab-container">
+                        <div class="tab-buttons">
+                            <button class="tab-button" onclick="openTab(event, 'tables{{ query_num }}')" id="defaultOpenInner{{ query_num }}">Tables View</button>
+                            <button class="tab-button" onclick="openTab(event, 'query_view{{ query_num }}')">Query View</button>
+                        </div>
+                        <button class="download-button" onclick="downloadCurrentImage('query{{ query_num }}')">Download Image</button>
+                    </div>
+                    <div id="tables{{ query_num }}" class="tabcontent">
+                        <div class="output-field">
+                            {% if images.tables_view %}
+                                <img class="visualization-image zoomable" src="data:image/png;base64,{{ images.tables_view }}" alt="Tables View Image">
+                            {% else %}
+                                <p>No Tables View available for this query.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div id="query_view{{ query_num }}" class="tabcontent">
+                        <div class="output-field">
+                            {% if images.query_view %}
+                                <img class="visualization-image zoomable" src="data:image/png;base64,{{ images.query_view }}" alt="Query View Image">
+                            {% else %}
+                                <p>No Query View available for this query.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No visualizations available. <br />Please enter a SQL query and click 'Visualize'.</p>
+        {% endif %}
     </div>
 </div>
 
 <script>
-function formatSQLQueryWithClauses(query) {
-    // Trim leading and trailing spaces
-    query = query.trim();
-    
-    // List of SQL clauses to be converted to uppercase and followed by a newline
-    const clauses = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'JOIN', 'ON', 'ORDER', 'GROUP', 'HAVING', 'LIMIT', 'UNION', 'WITH'];
+    function formatSQLQueryWithClauses(query) {
+        // Trim leading and trailing spaces
+        query = query.trim();
+        
+        // List of SQL clauses to be converted to uppercase and followed by a newline
+        const clauses = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'JOIN', 'ON', 'ORDER', 'GROUP', 'HAVING', 'LIMIT', 'UNION', 'WITH'];
 
-    // Create a regex pattern to match these clauses
-    const regexPattern = new RegExp(`\\b(${clauses.join('|')})\\b`, 'gi');
+        // Create a regex pattern to match these clauses
+        const regexPattern = new RegExp(`\\b(${clauses.join('|')})\\b`, 'gi');
 
-    // Replace clauses with uppercase and newline
-    query = query.replace(regexPattern, function(match) {
-        return '\n' + match.toUpperCase();
+        // Replace clauses with uppercase and newline
+        query = query.replace(regexPattern, function(match) {
+            return '\n' + match.toUpperCase();
+        });
+
+        // Remove any extra spaces or newlines at the beginning of the query
+        query = query.trim();
+
+        // Ensure the query ends with a semicolon
+        if (!query.endsWith(";")) {
+            query += ";";
+        }
+
+        return query;
+    }
+
+
+    var startX;
+    var startWidth;
+    var isResizing = false;
+
+    var splitter = document.getElementById("splitter");
+    var sqlQueryContainer = document.getElementById("sqlQueryContainer");
+    var outputContainer = document.getElementById("outputContainer");
+    var queryInput = document.getElementById("query");
+    var queryInputValue = queryInput.value.trim();
+    queryInputValue = queryInputValue.replace('/\n+\g', ' ');
+    splitter.addEventListener("mousedown", function(event) {
+        startX = event.clientX;
+        startWidth = parseFloat(getComputedStyle(sqlQueryContainer, null).getPropertyValue("width"));
+        isResizing = true;
     });
 
-    // Remove any extra spaces or newlines at the beginning of the query
-    query = query.trim();
+    document.addEventListener("mousemove", function(event) {
+        if (isResizing) {
+            var newWidth = startWidth + event.clientX - startX;
+            sqlQueryContainer.style.width = newWidth + "px";
+            outputContainer.style.width = "calc(100% - " + newWidth + "px)";
+        }
+    });
 
-    // Ensure the query ends with a semicolon
-    if (!query.endsWith(";")) {
-        query += ";";
+    document.addEventListener("mouseup", function() {
+        isResizing = false;
+    });
+
+    function visualize() {
+        var query = queryInput.value.trim()
+        if (query === "") {
+            alert("Please enter a SQL query first.");
+            return false;
+        }
+        
+        return True
     }
 
-    return query;
-}
+    window.addEventListener("load", function() {
+        var initialQuery = queryInputValue;
+        
+        if (initialQuery !== "") {
+            queryInput.value = formatSQLQueryWithClauses(queryInput.value);
+        }
+    });
 
+    window.addEventListener("wheel", function(event) {
+        if (event.target.classList.contains("visualization-image")) {
+            var visualizationImage = event.target;
+            if (event.deltaY < 0) {
+                visualizationImage.classList.add("zoom-in");
+                visualizationImage.classList.remove("zoom-out");
+            } else if (event.deltaY > 0) {
+                visualizationImage.classList.add("zoom-out");
+                visualizationImage.classList.remove("zoom-in");
+            }
+        }
+    });
 
-var startX;
-var startWidth;
-var isResizing = false;
-
-var splitter = document.getElementById("splitter");
-var sqlQueryContainer = document.getElementById("sqlQueryContainer");
-var outputContainer = document.getElementById("outputContainer");
-var queryInput = document.getElementById("query");
-var queryInputValue = queryInput.value.trim();
-queryInputValue = queryInputValue.replace('/\n+\g', ' ');
-splitter.addEventListener("mousedown", function(event) {
-    startX = event.clientX;
-    startWidth = parseFloat(getComputedStyle(sqlQueryContainer, null).getPropertyValue("width"));
-    isResizing = true;
-});
-
-document.addEventListener("mousemove", function(event) {
-    if (isResizing) {
-        var newWidth = startWidth + event.clientX - startX;
-        sqlQueryContainer.style.width = newWidth + "px";
-        outputContainer.style.width = "calc(100% - " + newWidth + "px)";
+    function openQueryTab(evt, queryId) {
+        var i, querycontent, tablinks;
+        querycontent = document.getElementsByClassName("query-content");
+        for (i = 0; i < querycontent.length; i++) {
+            querycontent[i].style.display = "none";
+        }
+        tablinks = document.getElementById("queryTabs").getElementsByClassName("tab-button");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(queryId).style.display = "block";
+        evt.currentTarget.className += " active";
+        
+        // Open the default inner tab (Tables View)
+        document.getElementById("defaultOpenInner" + queryId.replace("query", "")).click();
     }
-});
 
-document.addEventListener("mouseup", function() {
-    isResizing = false;
-});
-
-function visualize() {
-    var query = queryInput.value.trim()
-    if (query === "") {
-        alert("Please enter a SQL query first.");
-        return false;
+    function openTab(evt, tabId) {
+        var queryContent = evt.currentTarget.closest('.query-content');
+        var tabcontent = queryContent.getElementsByClassName("tabcontent");
+        for (var i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        var tablinks = queryContent.getElementsByClassName("tab-button");
+        for (var i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabId).style.display = "block";
+        evt.currentTarget.className += " active";
     }
-    
-    return True
-}
 
-window.addEventListener("load", function() {
-    var initialQuery = queryInputValue;
-    
-    if (initialQuery !== "") {
-        queryInput.value = formatSQLQueryWithClauses(queryInput.value);
-    }
-});
+    function downloadCurrentImage(queryId) {
+        var queryContainer = document.getElementById(queryId);
+        var activeTab = queryContainer.querySelector('.tab-button.active');
+        var containerId = activeTab.getAttribute('onclick').match(/'([^']+)'/)[1];
+        var container = queryContainer.querySelector('#' + containerId);
+        var img = container.querySelector('.visualization-image');
 
-window.addEventListener("wheel", function(event) {
-    if (event.target.classList.contains("visualization-image")) {
-        var visualizationImage = event.target;
-        if (event.deltaY < 0) {
-            visualizationImage.classList.add("zoom-in");
-            visualizationImage.classList.remove("zoom-out");
-        } else if (event.deltaY > 0) {
-            visualizationImage.classList.add("zoom-out");
-            visualizationImage.classList.remove("zoom-in");
+        if (img) {
+            var filename = containerId.includes('tables') ? 'Tables_view.png' : 'Query_view.png';
+            var link = document.createElement('a');
+            link.href = img.src;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            alert('No image available to download.');
         }
     }
-});
 
-function openTab(evt, tabName) {
-    var i, tabcontent, tablinks;
-    tabcontent = document.getElementsByClassName("tabcontent");
-    for (i = 0; i < tabcontent.length; i++) {
-        tabcontent[i].style.display = "none";
-    }
-    tablinks = document.getElementsByClassName("tab-button");
-    for (i = 0; i < tablinks.length; i++) {
-        tablinks[i].className = tablinks[i].className.replace(" active", "");
-    }
-    
-    document.getElementById(tabName).style.display = "block";
-    evt.currentTarget.className += " active";
-    
-}
-
-function downloadCurrentImage() {
-    var activeTab = document.querySelector('.tab-button.active');
-    var containerId = activeTab.getAttribute('onclick').match(/'([^']+)'/)[1];
-    var container = document.getElementById(containerId);
-    var img = container.querySelector('.visualization-image');
-
-    if (img) {
-        var filename = containerId === 'tab1' ? 'Tables_view.png' : 'Query_view.png';
-        var link = document.createElement('a');
-        link.href = img.src;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } else {
-        alert('No image available to download.');
-    }
-}
-
-document.getElementById("defaultOpen").click();
+    // Open the default query tab
+    document.addEventListener('DOMContentLoaded', function() {
+        var defaultTab = document.getElementById("defaultOpen");
+        if (defaultTab) {
+            defaultTab.click();
+        }
+    });
 </script>
 
 {% endblock %}
