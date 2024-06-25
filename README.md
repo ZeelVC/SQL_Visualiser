@@ -41,3 +41,14 @@ The process of SQL input to visualization follows these steps:
 4. Returning an image and storing it in the dictionary of images
 5. Sending the dictionary of images back to the HTML page
 6. Creating dynamic tabs based on dictionary size and representing the output
+
+## How to Run Application
+
+After performing all the setup steps, you can run the application by following these instructions:
+
+1. Open your terminal or command prompt
+2. Navigate to the directory containing the application files
+3. Run the following command:
+```bash
+Python main.py
+```
