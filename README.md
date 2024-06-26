@@ -52,3 +52,12 @@ After performing all the setup steps, you can run the application by following t
 ```bash
 Python main.py
 ```
+4. After running the command, open the link to your local host in a web browser and add the following route:
+```bash
+/SQLViz
+```
+For example, if your local host is running on port 5000, the full URL would be:
+```bash
+http://localhost:5000/SQLViz
+```
+> Note: Ensure that you're in the correct directory and that all dependencies are properly installed before running the application.
