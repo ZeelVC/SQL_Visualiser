@@ -7,11 +7,13 @@ SQLVisualizer is a powerful and intuitive tool that transforms complex SQL queri
 If you're using SQLVisualizer for the first time, follow these steps:
 
 ### 1. Install Python
-Visit the official Python website: [Python Downloads](https://www.python.org/downloads/)
+Visit the official Python website: [Python Downloads](https://www.python.org/downloads/)  
+version: - Python 3.12.4  
 
 ### 2. Install Graphviz
-1. Download Graphviz from the [official Graphviz website](https://graphviz.org/download/)
-2. Add the Graphviz bin folder path to your system:
+1. Download Graphviz from the [official Graphviz website](https://graphviz.org/download/)  
+   version: - graphviz-11.0.0 (64-bit) ZIP archive [sha256] (contains all tools and libraries)   
+3. Add the Graphviz bin folder path to your system:
    - Search for "edit the system environment variables" on your system
    - Include the bin folder path in both your system and user account variable paths
 
