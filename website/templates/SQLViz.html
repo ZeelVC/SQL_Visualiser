@@ -4,38 +4,63 @@
 
 {% block content %}
 <style>
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+        background-size: cover;
+        background-attachment: fixed;
+        background-position: center;
+        color: #333;
+    }
+
+    .header {
+        background-color: #4382F0;
+        color: white;
+        height: rem;
+        padding: 30px 15px;
+        margin-top: -3rem;
+        font-size: 24px;
+        font-weight: 700;
+        width: 100%;
+        position: absolute;
+        box-sizing: border-box;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
     .alerts-container {
         display: flex;
-        flex-direction: column; /* Stack alerts vertically */
-        align-items: center; /* Center the alerts horizontally */
-        position: fixed; /* Fix the container at the top */
+        flex-direction: column;
+        align-items: center;
+        position: fixed;
         top: 0;
         left: 0;
-        width: 100%; /* Make the container full-width */
-        z-index: 1000; /* Ensure the container is on top of other content */
-        padding: 0 0; /* Padding for some spacing at the top and bottom */
-        background-color: rgba(255, 255, 255, 0.9); /* Slightly opaque background */
+        width: 100%;
+        z-index: 1000;
+        padding: 0 0;
+        background-color: rgba(255, 255, 255, 0.9);
     }
 
     .alert {
-        position: relative; /* Position relative for absolute positioning of close button */
+        position: relative;
         padding: 15px;
-        margin: 10px 0; /* Vertical margin between alerts */
+        margin: 10px 0;
         border: 1px solid transparent;
         border-radius: 4px;
-        width: 90%; /* Alerts take up 90% of the container's width */
-        max-width: 1200px; /* Optional: Limit the max width of the alerts */
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add a subtle shadow for better visibility */
+        width: 90%;
+        max-width: 1200px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .close-btn {
-        position: absolute; /* Position absolute for the close button */
-        top: 50%; /* Align the button vertically in the middle */
-        right: 10px; /* Align the button to the right side */
-        transform: translateY(-50%); /* Adjust for vertical centering */
-        cursor: pointer; /* Change cursor to pointer on hover */
-        color: #000; /* Close button color */
-        font-size: 20px; /* Close button size */
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #000;
+        font-size: 20px;
     }
 
     .alert-success {
@@ -55,32 +80,26 @@
         background-color: #f8d7da;
         border-color: #f5c6cb;
     }
-    body {
-        margin: 0;
-        padding: 0;
-        background-image: url('https://plus.unsplash.com/premium_photo-1673795751644-e42b58452dc0?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
-        background-size: cover;
-        background-attachment: fixed;
-        background-position: center;
-        color: #000;
-        font-family: 'Arial', sans-serif;
-    }
 
     .container {
+        display: flex;
+        height: 100vh;
         width: 100%;
         max-width: 100vw;
-        height: 100vh;
-        display: flex;
+        margin-top: 3rem;
         position: relative;
+        padding: 10px;
+        box-sizing: border-box;
     }
 
     .sql-query-container,
     .output-container {
         flex-grow: 1;
-        overflow: auto;
+        overflow: none;
         border-radius: 5px;
         padding: 15px;
-        background-color: transparent;
+        background-color: #F1F5F9;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .sql-query-container {
@@ -95,50 +114,62 @@
         width: 10px;
         height: 100%;
         cursor: col-resize;
-        background: #fff;
+        background: #4382f0;
         border-radius: 5px;
+        transition: background 0.3s ease;
     }
 
     .splitter:hover {
-        background: #ccc;
+        background: #B0E9FD;
     }
 
     .input-field,
     .output-field {
         width: 100%;
         height: 300px;
-        color: #000;
-        border: none;
+        color: #333;
+        border: 1px solid #ccc;
         border-radius: 5px;
         padding: 15px;
         font-size: 16px;
         resize: none;
-        background-color: transparent;
+        background-color: #F1F5F9;
+    }
+
+    .output-field {
+        border: none;
+    }
+
+    p {
+        color: #999;
     }
 
     .input-field::placeholder,
     .output-field::placeholder {
-        color: rgba(0, 0, 0, 0.7);
+        color: #999;
     }
 
-    .input-field{
-        border: 2px solid #000;
+    .input-field {
+        border: 2px solid #4382F0;
         height: 50%;
     }
 
-    .visualize-button, .download-button {
+    .visualize-button,
+    .download-button {
         padding: 10px 20px;
         border: none;
-        border-radius: 5px;
-        background-color: rgba(255, 255, 255, 0.3);
-        color: #000;
+        border-radius: 20px;
+        background-color: #4382f0;
+        color: white;
         cursor: pointer;
         transition: background-color 0.3s ease;
         margin-top: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .visualize-button:hover, .download-button:hover {
-        background-color: rgba(255, 255, 255, 0.5);
+    .visualize-button:hover,
+    .download-button:hover {
+        background-color: #3266c0;
     }
 
     .form-container {
@@ -183,17 +214,43 @@
     .tab-button {
         padding: 10px 20px;
         border: none;
-        border-radius: 5px;
-        background-color: rgba(255, 255, 255, 0.3);
-        color: #000;
+        border-radius: 30px;
+        background-color: #4382f0;
+        color: white;
         cursor: pointer;
         margin-right: 10px;
+        transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .tab-button:hover, .tab-button.active {
-        background-color: rgba(255, 255, 255, 0.5);
+    .tab-button:hover,
+    .tab-button.active {
+        background-color: #3266c0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
     }
+
+    h2 {
+        color: #4382F0;
+        margin-bottom: 10px;
+    }
+
+    .tabcontent {
+        display: none;
+    }
+
+    .query-content {
+        display: none;
+    }
+
+    .active-tab {
+        display: block;
+    }
+
 </style>
+
+<div class="header">
+    <span>Data Consulting Services - Co-Pilot</span>
+</div>
 
 <div class="alerts-container">
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -262,6 +319,7 @@
 </div>
 
 <script>
+    
     function formatSQLQueryWithClauses(query) {
         // Trim leading and trailing spaces
         query = query.trim();
@@ -299,6 +357,9 @@
     var queryInput = document.getElementById("query");
     var queryInputValue = queryInput.value.trim();
     queryInputValue = queryInputValue.replace('/\n+\g', ' ');
+    const header = document.querySelector('.header');
+    const headerHeight = header.offsetHeight;
+
     splitter.addEventListener("mousedown", function(event) {
         startX = event.clientX;
         startWidth = parseFloat(getComputedStyle(sqlQueryContainer, null).getPropertyValue("width"));
@@ -316,6 +377,7 @@
     document.addEventListener("mouseup", function() {
         isResizing = false;
     });
+
 
     function visualize() {
         var query = queryInput.value.trim()
