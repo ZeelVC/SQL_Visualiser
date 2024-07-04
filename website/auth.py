@@ -3,7 +3,7 @@ import base64
 from flask import Blueprint, render_template, request, session, flash
 from .structure_view import main1, check_syntax
 from .detail_view import main2
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageEnhance, ImageDraw
 from .SQL_parsing_module import sql_to_dict
 
 auth = Blueprint('auth', __name__)
@@ -54,6 +54,16 @@ def remove_background(image_path):
     
     return modified_image_path
 
+def change_image_color(image_path, target_color):
+    img = Image.open(image_path)
+    img = img.convert("RGBA")
+    datas = img.getdata()
+    target_color = Image.new("RGBA", (1, 1), target_color).getpixel((0, 0))
+    new_data = [(target_color[0], target_color[1], target_color[2], item[3]) if item[3] != 0 else item for item in datas]
+    img.putdata(new_data)
+    modified_image_path = "colored_" + os.path.basename(image_path)
+    img.save(modified_image_path, "PNG")
+    return modified_image_path
 
 def add_cte_table(dict_of_cte_table, query, query_num):
     new_dict = dict_of_cte_table
@@ -103,8 +113,12 @@ def SQLViz():
                     modified_image_path1 = remove_background(image_path1)
                     modified_image_path2 = remove_background(image_path2)
                     
+                    
                     modified_image_path1 = enhance_image(modified_image_path1)
                     modified_image_path2 = enhance_image(modified_image_path2)
+
+                    modified_image_path1 = change_image_color(modified_image_path1, "#3266c0")
+                    modified_image_path2 = change_image_color(modified_image_path2, "#3266c0")
 
                     with open(modified_image_path1, 'rb') as image_file:
                         img_data1 = base64.b64encode(image_file.read()).decode('utf-8')
