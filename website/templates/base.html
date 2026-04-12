@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
@@ -14,14 +20,14 @@
       href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
       crossorigin="anonymous"
     />
-
+    {% block extra_head %}{% endblock %}
     <title>{% block title %}Base Template{% endblock %}</title>
 </head>
-<body>
-    <div class="container">
+<body class="{% block body_class %}{% endblock %}">
+    {% block body_background %}{% endblock %}
+    <div class="app-root">
         {% block content %}
         {% endblock %}
     </div>
-    
 </body>
 </html>

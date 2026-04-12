@@ -1,32 +1,142 @@
 {% extends "base.html" %}
 
-{% block title %}SQL Visualization{% endblock %}
+{% block title %}SQL Visualizer{% endblock %}
+{% block body_class %}page-sqlviz{% endblock %}
 
 {% block content %}
 <style>
-    body {
+    .app-root {
+        max-width: none !important;
+        width: 100%;
         margin: 0;
         padding: 0;
-        font-family: Arial, sans-serif;
-        background-color: #f0f0f0;
-        background-size: cover;
+        position: relative;
+        z-index: 1;
+        background: transparent;
+    }
+
+    @keyframes sqlviz-shimmer {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 200% 50%; }
+    }
+
+    @keyframes sqlviz-scan {
+        0% { transform: translateY(-100%); opacity: 0; }
+        15% { opacity: 0.12; }
+        85% { opacity: 0.12; }
+        100% { transform: translateY(100vh); opacity: 0; }
+    }
+
+    body.page-sqlviz {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Outfit", system-ui, sans-serif;
+        color: #e8ecf4;
+        overflow-x: hidden;
+        background-color: #050508;
+        background-image: linear-gradient(
+            105deg,
+            #050508 0%,
+            #0c0618 8%,
+            #0f172a 16%,
+            #1e1b4b 28%,
+            #134e4a 38%,
+            #312e81 48%,
+            #581c87 58%,
+            #0e7490 68%,
+            #1e3a5f 78%,
+            #1a0a2e 88%,
+            #050508 100%
+        );
+        background-size: 400% 400%;
         background-attachment: fixed;
-        background-position: center;
-        color: #333;
+        animation: sqlviz-shimmer 14s ease-in-out infinite alternate;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        body.page-sqlviz {
+            animation: none;
+            background-position: 50% 50%;
+        }
+
+        .brand-title {
+            animation: none;
+            background-position: 50% 50%;
+        }
+    }
+
+    .sqlviz-scanline {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 120px;
+        z-index: 2;
+        background: linear-gradient(
+            180deg,
+            transparent,
+            rgba(0, 240, 255, 0.03),
+            transparent
+        );
+        animation: sqlviz-scan 9s ease-in-out infinite;
+        pointer-events: none;
     }
 
     .header {
-        background-color: #4382F0;
-        color: white;
-        height: rem;
-        padding: 30px 15px;
-        margin-top: -3rem;
-        font-size: 24px;
-        font-weight: 700;
+        position: relative;
+        z-index: 6;
         width: 100%;
-        position: absolute;
         box-sizing: border-box;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.35rem clamp(1rem, 4vw, 2.5rem);
+        margin: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(8, 8, 12, 0.65);
+        backdrop-filter: blur(16px) saturate(160%);
+        -webkit-backdrop-filter: blur(16px) saturate(160%);
+        box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+            0 24px 48px rgba(0, 0, 0, 0.45);
+    }
+
+    .header-inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.75rem 1.5rem;
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+
+    .brand-title {
+        margin: 0;
+        font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+        background: linear-gradient(
+            105deg,
+            #f0f4ff 0%,
+            #a5b4fc 25%,
+            #22d3ee 50%,
+            #c084fc 75%,
+            #f0f4ff 100%
+        );
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: sqlviz-shimmer 14s ease-in-out infinite alternate;
+        text-shadow: 0 0 40px rgba(34, 211, 238, 0.15);
+    }
+
+    .brand-tagline {
+        margin: 0;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(200, 210, 255, 0.45);
     }
 
     .alerts-container {
@@ -38,168 +148,338 @@
         left: 0;
         width: 100%;
         z-index: 1000;
-        padding: 0 0;
-        background-color: rgba(255, 255, 255, 0.9);
+        padding: 0.75rem 1rem 0;
+        pointer-events: none;
+    }
+
+    .alerts-container .alert {
+        pointer-events: auto;
     }
 
     .alert {
         position: relative;
-        padding: 15px;
-        margin: 10px 0;
-        border: 1px solid transparent;
-        border-radius: 4px;
-        width: 90%;
-        max-width: 1200px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 14px 44px 14px 18px;
+        margin: 8px 0;
+        border-radius: 12px;
+        width: 92%;
+        max-width: 720px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
     }
 
     .close-btn {
         position: absolute;
         top: 50%;
-        right: 10px;
+        right: 14px;
         transform: translateY(-50%);
         cursor: pointer;
-        color: #000;
-        font-size: 20px;
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 1.25rem;
+        line-height: 1;
+    }
+
+    .close-btn:hover {
+        color: #fff;
     }
 
     .alert-success {
-        color: #155724;
-        background-color: #d4edda;
-        border-color: #c3e6cb;
+        color: #bbf7d0;
+        background: rgba(16, 185, 129, 0.18);
+        border-color: rgba(52, 211, 153, 0.35);
     }
 
     .alert-warning {
-        color: #856404;
-        background-color: #fff3cd;
-        border-color: #ffeeba;
+        color: #fde68a;
+        background: rgba(245, 158, 11, 0.15);
+        border-color: rgba(251, 191, 36, 0.35);
     }
 
     .alert-error {
-        color: #721c24;
-        background-color: #f8d7da;
-        border-color: #f5c6cb;
+        color: #fecaca;
+        background: rgba(239, 68, 68, 0.18);
+        border-color: rgba(248, 113, 113, 0.35);
     }
 
-    .container {
-        display: flex;
-        height: 100vh;
-        width: 100%;
-        
-        height: auto;
-        max-width: 100vw;
-        margin-top: 3rem;
+    .viz-workspace {
         position: relative;
-        padding: 10px;
+        z-index: 3;
+        display: flex;
+        align-items: stretch;
+        min-height: calc(100vh - 5.5rem);
+        width: 100%;
+        max-width: 100vw;
+        padding: clamp(0.75rem, 2vw, 1.25rem);
         box-sizing: border-box;
+        gap: 0;
     }
 
     .sql-query-container,
     .output-container {
-        flex-grow: 1;
-        overflow: none;
-        border-radius: 5px;
-        padding: 15px;
-        background-color: #F1F5F9;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: relative;
+        min-width: 0;
+        border-radius: 16px;
+        padding: clamp(1rem, 2vw, 1.35rem);
+        background: rgba(8, 10, 20, 0.52);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px) saturate(140%);
+        -webkit-backdrop-filter: blur(12px) saturate(140%);
+        box-shadow:
+            0 0 0 1px rgba(0, 240, 255, 0.04) inset,
+            0 20px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    .sql-query-container::before,
+    .output-container::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        padding: 1px;
+        background: linear-gradient(
+            135deg,
+            rgba(0, 240, 255, 0.25),
+            transparent 40%,
+            transparent 60%,
+            rgba(192, 132, 252, 0.25)
+        );
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+        opacity: 0.5;
     }
 
     .sql-query-container {
-        margin-right: 10px;
+        flex: 0 0 48%;
+        min-width: 260px;
+        margin-right: 6px;
     }
 
     .output-container {
-        margin-left: 10px;
+        flex: 1 1 auto;
+        min-width: 260px;
+        margin-left: 6px;
         justify-content: center;
         align-items: center;
     }
 
     .splitter {
-        width: 10px;
-        height: 100%;
+        position: relative;
+        flex-shrink: 0;
+        width: 12px;
+        align-self: stretch;
+        min-height: 200px;
         cursor: col-resize;
-        background: #4382f0;
-        border-radius: 5px;
-        transition: background 0.3s ease;
+        touch-action: none;
+        border-radius: 999px;
+        background: linear-gradient(180deg, rgba(0, 240, 255, 0.5), rgba(124, 58, 237, 0.6));
+        box-shadow:
+            0 0 20px rgba(0, 240, 255, 0.25),
+            0 0 28px rgba(124, 58, 237, 0.2);
+        transition: box-shadow 0.35s ease, filter 0.35s ease, transform 0.2s ease;
+    }
+
+    .splitter::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 3px;
+        height: 48px;
+        margin: -24px 0 0 -1.5px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.35);
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+        pointer-events: none;
     }
 
     .splitter:hover {
-        background: #B0E9FD;
+        filter: brightness(1.15);
+        box-shadow:
+            0 0 28px rgba(0, 240, 255, 0.45),
+            0 0 36px rgba(192, 132, 252, 0.35);
+    }
+
+    body.sqlviz-resizing {
+        cursor: col-resize !important;
+        user-select: none;
+    }
+
+    body.sqlviz-resizing * {
+        cursor: col-resize !important;
     }
 
     .input-field,
     .output-field {
         width: 100%;
-        height: 300px;
-        color: #333;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        padding: 15px;
-        font-size: 16px;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        color: #e2e8f0;
+        border-radius: 12px;
+        padding: 14px 16px;
+        font-size: 0.9rem;
+        line-height: 1.55;
         resize: none;
-        background-color: #F1F5F9;
+        background: rgba(6, 8, 14, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
     }
 
     .output-field {
-        border: none;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        min-height: 280px;
         height: 100%;
         display: flex;
         justify-content: center;
         align-items: center;
     }
 
-    p {
-        color: #999;
+    .sql-query-container p,
+    .output-container p {
+        color: rgba(203, 213, 225, 0.65);
+        font-size: 0.95rem;
+        line-height: 1.6;
     }
 
     .input-field::placeholder,
     .output-field::placeholder {
-        color: #999;
+        color: rgba(148, 163, 184, 0.55);
     }
 
     .input-field {
-        border: 2px solid #4382F0;
-        height: 50%;
+        border-color: rgba(34, 211, 238, 0.35);
+        min-height: 260px;
+        height: auto;
+        flex: none;
     }
 
-    .visualize-button,
-    .download-button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 20px;
-        background-color: #4382f0;
-        color: white;
+    .input-field:focus {
+        outline: none;
+        border-color: rgba(34, 211, 238, 0.65);
+        box-shadow:
+            0 0 0 3px rgba(34, 211, 238, 0.12),
+            inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+    }
+
+    .visualize-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
+        width: 100%;
+        max-width: 22rem;
+        margin: 0 auto;
+        padding: 1rem 1.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 14px;
+        font-family: "Outfit", sans-serif;
+        font-weight: 700;
+        font-size: 1rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #030308;
         cursor: pointer;
-        transition: background-color 0.3s ease;
-        margin-top: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(125deg, #5eead4 0%, #22d3ee 35%, #818cf8 70%, #c084fc 100%);
+        background-size: 220% 220%;
+        box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+            0 0 36px rgba(34, 211, 238, 0.35),
+            0 14px 32px rgba(0, 0, 0, 0.45);
+        transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease, background-position 0.5s ease;
     }
 
-    .visualize-button:hover,
+    .visualize-button::before {
+        content: "";
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 50%;
+        background: radial-gradient(circle, #fff 0%, rgba(255, 255, 255, 0) 70%);
+        box-shadow: 0 0 14px 3px rgba(255, 255, 255, 0.65);
+        animation: sqlviz-pulse-dot 1.6s ease-in-out infinite;
+    }
+
+    @keyframes sqlviz-pulse-dot {
+        0%, 100% { opacity: 0.75; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.15); }
+    }
+
+    .visualize-button:hover {
+        transform: translateY(-3px);
+        filter: brightness(1.07) saturate(1.05);
+        background-position: 100% 50%;
+        box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.18) inset,
+            0 0 48px rgba(167, 139, 250, 0.45),
+            0 18px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .visualize-button:active {
+        transform: translateY(-1px);
+        filter: brightness(0.98);
+    }
+
+    .download-button {
+        padding: 12px 26px;
+        border-radius: 999px;
+        font-family: "Outfit", sans-serif;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #e2e8f0;
+        cursor: pointer;
+        background: linear-gradient(120deg, rgba(30, 41, 59, 0.9), rgba(51, 65, 85, 0.95));
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        margin-top: 12px;
+    }
+
     .download-button:hover {
-        background-color: #3266c0;
+        transform: translateY(-2px);
+        filter: brightness(1.08);
+        border-color: rgba(34, 211, 238, 0.4);
+        color: #f8fafc;
+        box-shadow:
+            0 0 24px rgba(34, 211, 238, 0.2),
+            0 12px 28px rgba(0, 0, 0, 0.35);
     }
 
     .form-container {
         display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        margin-bottom: 20px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1.1rem;
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    .form-container .query-input-wrap {
+        width: 100%;
+    }
+
+    .form-container .form-actions {
+        display: flex;
+        justify-content: center;
+        padding-top: 0.15rem;
     }
 
     .form-container .input-field {
-        flex-grow: 1;
-        margin-right: 10px;
+        width: 100%;
+        margin-right: 0;
     }
 
     .visualization-image {
         max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
+        max-height: min(72vh, 640px);
         width: auto;
         height: auto;
-        transition: transform 0.3s ease;
-        object-fit: cover;
+        object-fit: contain;
+        border-radius: 10px;
+        transition: transform 0.35s ease, box-shadow 0.35s ease;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
     }
 
     .visualization-image.zoom-in {
@@ -212,36 +492,79 @@
 
     .tab-container {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        margin-bottom: 10px;
+        gap: 10px;
+        margin-bottom: 12px;
     }
 
     .tab-buttons {
         display: flex;
-        margin-right: 20px;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-right: 0;
     }
 
     .tab-button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 30px;
-        background-color: #4382f0;
-        color: white;
+        padding: 10px 18px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.6);
+        color: rgba(226, 232, 240, 0.85);
+        font-family: "Outfit", sans-serif;
+        font-weight: 500;
+        font-size: 0.875rem;
         cursor: pointer;
-        margin-right: 10px;
-        transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
-    .tab-button:hover,
+    .tab-button:hover {
+        border-color: rgba(34, 211, 238, 0.35);
+        color: #f8fafc;
+    }
+
     .tab-button.active {
-        background-color: #3266c0;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(135deg, rgba(34, 211, 238, 0.25), rgba(167, 139, 250, 0.3));
+        border-color: rgba(34, 211, 238, 0.45);
+        color: #fff;
+        box-shadow:
+            0 0 20px rgba(34, 211, 238, 0.2),
+            0 6px 16px rgba(0, 0, 0, 0.25);
     }
 
-    h2 {
-        color: #4382F0;
-        margin-bottom: 10px;
+    .sql-query-container h2,
+    .output-container h2 {
+        font-size: 1.05rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(226, 232, 240, 0.92);
+        margin: 0 0 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .sql-query-container h2::after {
+        content: "";
+        display: block;
+        width: 48px;
+        height: 2px;
+        margin-top: 10px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #22d3ee, #a78bfa);
+        box-shadow: 0 0 12px rgba(34, 211, 238, 0.5);
+    }
+
+    .output-container h2::after {
+        content: "";
+        display: block;
+        width: 48px;
+        height: 2px;
+        margin-top: 10px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, #a78bfa, #22d3ee);
+        box-shadow: 0 0 12px rgba(167, 139, 250, 0.45);
     }
 
     .tabcontent {
@@ -256,11 +579,59 @@
         display: block;
     }
 
+    @media (max-width: 768px) {
+        body.sqlviz-resizing,
+        body.sqlviz-resizing * {
+            cursor: row-resize !important;
+        }
+
+        .viz-workspace {
+            flex-direction: column;
+        }
+
+        .splitter {
+            width: 100%;
+            height: 12px;
+            min-height: 0;
+            cursor: row-resize;
+        }
+
+        .splitter::after {
+            width: 48px;
+            height: 3px;
+            margin: -1.5px 0 0 -24px;
+        }
+
+        .sql-query-container {
+            flex: 0 0 auto !important;
+            width: 100% !important;
+            margin-right: 0;
+            margin-bottom: 6px;
+            min-height: 0;
+        }
+
+        .output-container {
+            flex: 1 1 auto !important;
+            width: 100% !important;
+            margin-left: 0;
+            margin-top: 6px;
+            min-width: 0;
+        }
+
+        .visualize-button {
+            max-width: none;
+        }
+    }
 </style>
 
-<div class="header">
-    <span>Data Consulting Services - Co-Pilot</span>
-</div>
+<div class="sqlviz-scanline" aria-hidden="true"></div>
+
+<header class="header">
+    <div class="header-inner">
+        <h1 class="brand-title">SQL Visualizer</h1>
+        <p class="brand-tagline">Query · Structure · Graph</p>
+    </div>
+</header>
 
 <div class="alerts-container">
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -274,12 +645,16 @@
       {% endif %}
     {% endwith %}
 </div>
-<div class="container">
+<div class="viz-workspace" id="vizWorkspace">
     <div class="sql-query-container" id="sqlQueryContainer">
         <h2>SQL Query Input</h2>
         <form class="form-container" action="{{ url_for('auth.SQLViz') }}" method="POST">
-            <textarea class="input-field" id="query" name="query" rows="20" placeholder="Enter your SQL query here...&#10;&#10;Enter subquery in following format:&#10;&#10;( SQL_SubQuery )">{{ query | safe }}</textarea>
-            <button type="submit" class="visualize-button" onclick="return visualize()">Visualize</button>
+            <div class="query-input-wrap">
+                <textarea class="input-field" id="query" name="query" rows="20" placeholder="Enter your SQL query here...&#10;&#10;Enter subquery in following format:&#10;&#10;( SQL_SubQuery )">{{ query | safe }}</textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="visualize-button" onclick="return visualize()">Visualize</button>
+            </div>
         </form>
     </div>
     <div class="splitter" id="splitter"></div>
@@ -289,7 +664,7 @@
             <div class="tab-container">
                 <div class="tab-buttons" id="queryTabs">
                     {% for query_num in dict_of_images.keys() %}
-                        <button class="tab-button" onclick="openQueryTab(event, 'query{{ query_num }}')" {% if loop.first %}id="defaultOpen"{% endif %}>Query {{ query_num }}</button>
+                        <button class="tab-button" type="button" onclick="openQueryTab(event, 'query{{ query_num }}')" {% if loop.first %}id="defaultOpen"{% endif %}>Query {{ query_num }}</button>
                     {% endfor %}
                 </div>
             </div>
@@ -297,10 +672,10 @@
                 <div id="query{{ query_num }}" class="query-content">
                     <div class="tab-container">
                         <div class="tab-buttons">
-                            <button class="tab-button" onclick="openTab(event, 'tables{{ query_num }}')" id="defaultOpenInner{{ query_num }}">Tables View</button>
-                            <button class="tab-button" onclick="openTab(event, 'query_view{{ query_num }}')">Query View</button>
+                            <button class="tab-button" type="button" onclick="openTab(event, 'tables{{ query_num }}')" id="defaultOpenInner{{ query_num }}">Tables View</button>
+                            <button class="tab-button" type="button" onclick="openTab(event, 'query_view{{ query_num }}')">Query View</button>
                         </div>
-                        <button class="download-button" onclick="downloadCurrentImage('query{{ query_num }}')">Download Image</button>
+                        <button type="button" class="download-button" onclick="downloadCurrentImage('query{{ query_num }}')">Download Image</button>
                     </div>
                     <div id="tables{{ query_num }}" class="tabcontent">
                         <div class="output-field">
@@ -343,10 +718,7 @@
         return query;
     }
 
-    var startX;
-    var startWidth;
-    var isResizing = false;
-
+    var workspace = document.getElementById("vizWorkspace");
     var splitter = document.getElementById("splitter");
     var sqlQueryContainer = document.getElementById("sqlQueryContainer");
     var outputContainer = document.getElementById("outputContainer");
@@ -356,23 +728,118 @@
     const header = document.querySelector('.header');
     const headerHeight = header.offsetHeight;
 
-    splitter.addEventListener("mousedown", function(event) {
-        startX = event.clientX;
-        startWidth = parseFloat(getComputedStyle(sqlQueryContainer, null).getPropertyValue("width"));
-        isResizing = true;
-    });
+    (function initSqlvizSplit() {
+        if (!workspace || !splitter || !sqlQueryContainer || !outputContainer) return;
 
-    document.addEventListener("mousemove", function(event) {
-        if (isResizing) {
-            var newWidth = startWidth + event.clientX - startX;
-            sqlQueryContainer.style.width = newWidth + "px";
-            outputContainer.style.width = "calc(100% - " + newWidth + "px)";
+        var dragging = false;
+        var startCoord = 0;
+        var startSize = 0;
+        var mode = "horizontal";
+        var wasStacked = window.matchMedia("(max-width: 768px)").matches;
+
+        function isStacked() {
+            return window.matchMedia("(max-width: 768px)").matches;
         }
-    });
 
-    document.addEventListener("mouseup", function() {
-        isResizing = false;
-    });
+        function clamp(n, lo, hi) {
+            return Math.max(lo, Math.min(hi, n));
+        }
+
+        function splitterSpan() {
+            var g = parseFloat(window.getComputedStyle(workspace).gap);
+            if (isNaN(g)) g = 0;
+            var s = splitter.getBoundingClientRect();
+            var m = 0;
+            if (isStacked()) {
+                m = (parseFloat(getComputedStyle(sqlQueryContainer).marginBottom) || 0)
+                    + (parseFloat(getComputedStyle(outputContainer).marginTop) || 0);
+                return s.height + g + m;
+            }
+            m = (parseFloat(getComputedStyle(sqlQueryContainer).marginRight) || 0)
+                + (parseFloat(getComputedStyle(outputContainer).marginLeft) || 0);
+            return s.width + g + m;
+        }
+
+        function beginDrag(clientX, clientY) {
+            dragging = true;
+            mode = isStacked() ? "vertical" : "horizontal";
+            if (mode === "horizontal") {
+                startCoord = clientX;
+                startSize = sqlQueryContainer.getBoundingClientRect().width;
+            } else {
+                startCoord = clientY;
+                startSize = sqlQueryContainer.getBoundingClientRect().height;
+            }
+            document.body.classList.add("sqlviz-resizing");
+        }
+
+        function moveDrag(clientX, clientY) {
+            if (!dragging) return;
+            var rect = workspace.getBoundingClientRect();
+            var extra = splitterSpan();
+            var minSide = 220;
+
+            if (mode === "horizontal") {
+                var w = rect.width;
+                var delta = clientX - startCoord;
+                var newW = clamp(startSize + delta, minSide, w - minSide - extra);
+                sqlQueryContainer.style.flex = "0 0 " + newW + "px";
+                outputContainer.style.flex = "1 1 auto";
+            } else {
+                var h = rect.height;
+                var delta = clientY - startCoord;
+                var newH = clamp(startSize + delta, minSide, h - minSide - extra);
+                sqlQueryContainer.style.flex = "0 0 " + newH + "px";
+                outputContainer.style.flex = "1 1 auto";
+            }
+        }
+
+        function endDrag() {
+            if (!dragging) return;
+            dragging = false;
+            document.body.classList.remove("sqlviz-resizing");
+        }
+
+        splitter.addEventListener("mousedown", function(event) {
+            event.preventDefault();
+            beginDrag(event.clientX, event.clientY);
+        });
+
+        document.addEventListener("mousemove", function(event) {
+            if (dragging) {
+                event.preventDefault();
+                moveDrag(event.clientX, event.clientY);
+            }
+        });
+
+        document.addEventListener("mouseup", endDrag);
+
+        splitter.addEventListener("touchstart", function(event) {
+            if (event.touches.length !== 1) return;
+            event.preventDefault();
+            var t = event.touches[0];
+            beginDrag(t.clientX, t.clientY);
+        }, { passive: false });
+
+        document.addEventListener("touchmove", function(event) {
+            if (!dragging || event.touches.length !== 1) return;
+            event.preventDefault();
+            var t = event.touches[0];
+            moveDrag(t.clientX, t.clientY);
+        }, { passive: false });
+
+        document.addEventListener("touchend", endDrag);
+        document.addEventListener("touchcancel", endDrag);
+
+        window.addEventListener("resize", function() {
+            var now = isStacked();
+            if (now !== wasStacked) {
+                sqlQueryContainer.style.flex = "";
+                outputContainer.style.flex = "";
+                wasStacked = now;
+            }
+        });
+    })();
 
     function visualize() {
         var query = queryInput.value.trim()
