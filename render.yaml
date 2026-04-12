@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: sql-visualiser
+    env: docker
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true

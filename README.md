@@ -81,6 +81,22 @@ Typical causes:
 
 If something still fails, check **Vercel → Project → Logs** for the traceback. The `/SQLViz` handler logs exceptions and shows a flash message instead of a raw 500 when the failure is caught.
 
+### Render-specific fix for `apt-get` build failures
+
+If Render logs show errors like:
+
+`E: List directory /var/lib/apt/lists/partial is missing. - Acquire (30: Read-only file system)`
+
+it means your service is using Render's **native Python environment** with a build command that runs `apt-get`. In that environment, installing OS packages during build is restricted.
+
+This repository includes a `Dockerfile` and `render.yaml` so Graphviz is installed in a Docker image instead:
+
+- `Dockerfile` installs `graphviz` with `apt-get` and runs Gunicorn.
+- `render.yaml` configures a Render **Docker web service**.
+
+Use a Docker-based Render service for this app (or switch your existing service to Docker deploy from this repo).
+
+
 ### Practical hosting options
 
 | Option | Notes |
