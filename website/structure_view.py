@@ -1,3 +1,5 @@
+import os
+import uuid
 import sqlparse
 from graphviz import Digraph
 from flask import flash, render_template
@@ -589,8 +591,14 @@ def check_syntax(query, ind):
 
 
 # main function
-def main1(query, dict_of_cte_table):
+def main1(query, dict_of_cte_table, workdir=None):
     global is_cte_in_main
+
+    if workdir is None:
+        workdir = os.getcwd()
+    os.makedirs(workdir, exist_ok=True)
+    out_uid = uuid.uuid4().hex[:12]
+    out_base = os.path.join(workdir, f"ns1_{out_uid}")
     
     # Preprocessing the query
     query = query.replace('\n', ' ').replace(', ', ',').replace(',', ', ')
@@ -745,9 +753,9 @@ def main1(query, dict_of_cte_table):
 
         print_graph(root)
         root.visualize(graph)
-        graph.render('node_structure1', format='png', cleanup=True)
-        
-        return 'node_structure1.png'
+        graph.render(out_base, format='png', cleanup=True)
+
+        return out_base + '.png'
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -827,4 +835,4 @@ ORDER BY un, yymmddcrt
 
 
     '''
-    main1(query)
+    main1(query, {})

@@ -1,6 +1,8 @@
 import os
 import base64
-from flask import Blueprint, render_template, request, session, flash
+import shutil
+import tempfile
+from flask import Blueprint, render_template, request, flash, current_app
 from .structure_view import main1, check_syntax
 from .detail_view import main2
 from PIL import Image, ImageEnhance, ImageDraw
@@ -9,6 +11,7 @@ from .SQL_parsing_module import sql_to_dict
 auth = Blueprint('auth', __name__)
 
 def enhance_image(image_path):
+    out_dir = os.path.dirname(image_path) or "."
     # Open the image
     img = Image.open(image_path)
     img = img.convert("RGBA")
@@ -19,8 +22,7 @@ def enhance_image(image_path):
     enhancer = ImageEnhance.Contrast(img)
     img = enhancer.enhance(1.5)   # Increase contrast by 50%
 
-    # Save the modified image to a temporary path
-    modified_image_path = "modified_" + os.path.basename(image_path)
+    modified_image_path = os.path.join(out_dir, "modified_" + os.path.basename(image_path))
     img.save(modified_image_path, "PNG")
 
     return modified_image_path
@@ -48,10 +50,10 @@ def remove_background(image_path):
     # Update image data
     img.putdata(new_data)
     
-    # Save the modified image to a temporary path
-    modified_image_path = "modified_" + os.path.basename(image_path)
+    out_dir = os.path.dirname(image_path) or "."
+    modified_image_path = os.path.join(out_dir, "modified_" + os.path.basename(image_path))
     img.save(modified_image_path, "PNG")
-    
+
     return modified_image_path
 
 def change_image_color(image_path, target_color):
@@ -61,7 +63,8 @@ def change_image_color(image_path, target_color):
     target_color = Image.new("RGBA", (1, 1), target_color).getpixel((0, 0))
     new_data = [(target_color[0], target_color[1], target_color[2], item[3]) if item[3] != 0 else item for item in datas]
     img.putdata(new_data)
-    modified_image_path = "colored_" + os.path.basename(image_path)
+    out_dir = os.path.dirname(image_path) or "."
+    modified_image_path = os.path.join(out_dir, "colored_" + os.path.basename(image_path))
     img.save(modified_image_path, "PNG")
     return modified_image_path
 
@@ -94,50 +97,57 @@ def SQLViz():
 
     if request.method == 'POST':
         query_input = request.form.get('query', '')
-        query_dict = sql_to_dict(query_input)  # Parse multiple queries
-        dict_of_table_created = {}
+        try:
+            query_dict = sql_to_dict(query_input)  # Parse multiple queries
+            dict_of_table_created = {}
 
-        if query_dict:
-            for query_num, query in query_dict.items():
-                #if check_syntax(query, 0):
-                #    flash(f"SQL Syntax Error in Query {query_num}:", "error")
-                #    continue
-                dict_of_table_created = add_cte_table(dict_of_table_created, query, query_num)
+            if query_dict:
+                for query_num, query in query_dict.items():
+                    dict_of_table_created = add_cte_table(dict_of_table_created, query, query_num)
 
-                # Generate the visualization
-                image_path1 = main1(query, dict_of_table_created)
-                image_path2 = main2(query, dict_of_table_created)
-                
-                if image_path1 and os.path.exists(image_path1) and image_path2 and os.path.exists(image_path2):
-                    # Process and encode images
-                    modified_image_path1 = remove_background(image_path1)
-                    modified_image_path2 = remove_background(image_path2)
-                    
-                    
-                    modified_image_path1 = enhance_image(modified_image_path1)
-                    modified_image_path2 = enhance_image(modified_image_path2)
+                    workdir = tempfile.mkdtemp(prefix="sqlviz_")
+                    try:
+                        image_path1 = main1(query, dict_of_table_created, workdir)
+                        image_path2 = main2(query, dict_of_table_created, workdir)
 
-                    modified_image_path1 = change_image_color(modified_image_path1, "#3266c0")
-                    modified_image_path2 = change_image_color(modified_image_path2, "#3266c0")
+                        if image_path1 and os.path.exists(image_path1) and image_path2 and os.path.exists(image_path2):
+                            modified_image_path1 = remove_background(image_path1)
+                            modified_image_path2 = remove_background(image_path2)
 
-                    with open(modified_image_path1, 'rb') as image_file:
-                        img_data1 = base64.b64encode(image_file.read()).decode('utf-8')
-                    with open(modified_image_path2, 'rb') as image_file:
-                        img_data2 = base64.b64encode(image_file.read()).decode('utf-8')
-                    
-                    # Store encoded images in dict_of_images
-                    dict_of_images[query_num] = {
-                        'tables_view': img_data1,
-                        'query_view': img_data2
-                    }
-                    
-                    # Remove temporary files
-                    os.remove(image_path1)
-                    os.remove(image_path2)
-                    os.remove(modified_image_path1)
-                    os.remove(modified_image_path2)
-                else:
-                    flash(f"Failed to generate visualization for Query {query_num}", "error")
-        print(dict_of_table_created)
+                            modified_image_path1 = enhance_image(modified_image_path1)
+                            modified_image_path2 = enhance_image(modified_image_path2)
+
+                            modified_image_path1 = change_image_color(modified_image_path1, "#3266c0")
+                            modified_image_path2 = change_image_color(modified_image_path2, "#3266c0")
+
+                            with open(modified_image_path1, 'rb') as image_file:
+                                img_data1 = base64.b64encode(image_file.read()).decode('utf-8')
+                            with open(modified_image_path2, 'rb') as image_file:
+                                img_data2 = base64.b64encode(image_file.read()).decode('utf-8')
+
+                            dict_of_images[query_num] = {
+                                'tables_view': img_data1,
+                                'query_view': img_data2
+                            }
+
+                            for p in (image_path1, image_path2, modified_image_path1, modified_image_path2):
+                                try:
+                                    if p and os.path.exists(p):
+                                        os.remove(p)
+                                except OSError:
+                                    pass
+                        else:
+                            flash(f"Failed to generate visualization for Query {query_num}", "error")
+                    finally:
+                        shutil.rmtree(workdir, ignore_errors=True)
+            print(dict_of_table_created)
+        except Exception:
+            current_app.logger.exception("SQLViz POST failed")
+            flash(
+                "Could not generate the visualization. On cloud hosts the Graphviz system tools "
+                "must be installed and available as the `dot` command (Vercel’s default Python runtime "
+                "does not include Graphviz).",
+                "error",
+            )
 
     return render_template("SQLViz.html", query=query_input, dict_of_images=dict_of_images)

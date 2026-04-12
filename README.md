@@ -68,6 +68,28 @@ The dev server uses Flask’s built-in debugger; do not use this mode in product
 | `website/templates/SQLViz.html` | Main UI |
 | `website/static/` | Static assets |
 
+## Deploying (Vercel, Railway, Render, etc.)
+
+Diagram generation uses the **Graphviz** program (`dot` on your `PATH`), not only the Python `graphviz` package. The app also writes PNGs and intermediate images under **`/tmp`** (via `tempfile.mkdtemp`), which is required on read-only serverless filesystems.
+
+### Why “Internal Server Error” on Vercel
+
+Typical causes:
+
+1. **No Graphviz binary** — Vercel’s default Python serverless image does **not** include Graphviz. The Python package shells out to `dot`; if `dot` is missing, rendering fails.
+2. **Read-only project directory** — Older code wrote `node_structure1.png` in the current working directory. That fails on many hosts. The app now uses a per-request temp directory under the system temp folder.
+
+If something still fails, check **Vercel → Project → Logs** for the traceback. The `/SQLViz` handler logs exceptions and shows a flash message instead of a raw 500 when the failure is caught.
+
+### Practical hosting options
+
+| Option | Notes |
+|--------|--------|
+| **Railway**, **Render**, **Fly.io**, **Google Cloud Run** (with Dockerfile) | Install Graphviz in the image or use a buildpack that includes `apt-get install graphviz`. |
+| **Vercel** | Harder: you need a **custom runtime** or **Docker** deployment where Graphviz is installed, or move diagram generation to a separate worker service that has Graphviz. Plain “Python + pip” on Vercel usually will **not** work without extra steps. |
+
+For production, also switch off Flask `debug=True` in `main.py` and use a proper WSGI server (e.g. Gunicorn).
+
 ## License
 
 Add your license here if the project is published.
